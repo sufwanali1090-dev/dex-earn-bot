@@ -1,0 +1,6 @@
+{
+  "name": "Polygon DEX Arbitrage Bot",
+  "description": "High-frequency millisecond DEX-to-DEX and triangular arbitrage scanner and bot on Polygon Network with multi-token scanning, fee optimization, and real-time gap execution.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
