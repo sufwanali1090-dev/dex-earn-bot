@@ -127,8 +127,8 @@ export interface BotStats {
 }
 
 export interface LiveTradingPrerequisites {
-  minUsdtRequired: number; // 1.0 USDT
-  minPolGasUsdRequired: number; // $0.50 worth of POL
+  minUsdtRequired: number; // 0 USDT
+  minPolGasUsdRequired: number; // $0.05 worth of POL
   currentUsdt: number;
   currentPol: number;
   currentPolUsd: number;
