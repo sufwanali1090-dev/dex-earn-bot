@@ -260,8 +260,8 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({
                     </span>
                     <span className="text-[10px] font-bold text-slate-400 font-mono">USDT</span>
                   </div>
-                  <span className={`text-[10px] font-mono font-bold block mt-1 ${currentUsdt >= 1.0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                    {currentUsdt >= 1.0 ? '✓ Min 1 USDT Met' : '✗ Need ≥ 1 USDT'}
+                  <span className={`text-[10px] font-mono font-bold block mt-1 ${currentUsdt >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                    {currentUsdt >=  0 ? '✓ Min 1 USDT Met' : '✗ Need ≥ 0 USDT'}
                   </span>
                 </div>
 
@@ -275,8 +275,8 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({
                     </span>
                     <span className="text-[10px] font-bold text-indigo-400 font-mono">POL</span>
                   </div>
-                  <span className={`text-[10px] font-mono font-bold block mt-1 ${(currentPol * polygonRpc.getPolPriceUsd()) >= 0.50 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                    {(currentPol * polygonRpc.getPolPriceUsd()) >= 0.50 ? '✓ Min $0.50 Gas Met' : '✗ Need ≥ $0.50 POL'}
+                  <span className={`text-[10px] font-mono font-bold block mt-1 ${(currentPol * polygonRpc.getPolPriceUsd()) >= 0.05 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                    {(currentPol * polygonRpc.getPolPriceUsd()) >= 0.05 ? '✓ Min $0.05 Gas Met' : '✗ Need ≥ $0.05 POL'}
                   </span>
                 </div>
 
