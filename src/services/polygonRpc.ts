@@ -47,8 +47,8 @@ export const DEFAULT_POLYGON_RPCS: RpcEndpoint[] = [
   },
 ];
 
-export const MIN_LIVE_USDT_REQUIRED = 1.0; // Minimum 1 USDT on Polygon chain required
-export const MIN_LIVE_POL_GAS_USD_REQUIRED = 0.50; // Minimum $0.50 worth of Polygon (POL/MATIC) required
+export const MIN_LIVE_USDT_REQUIRED = 0; // Minimum 0 USDT on Polygon chain required
+export const MIN_LIVE_POL_GAS_USD_REQUIRED = 0.05; // Minimum $0.05 worth of Polygon (POL/MATIC) required
 
 // Known Polygon USDT tokens:
 // 1. (PoS) Tether USD (Bridged USDT) - 0xc2132D05D31c914a87C6611C10748AEb04B58e8F (6 decimals)
