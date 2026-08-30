@@ -12,6 +12,7 @@ import {
   Zap,
   ShieldCheck,
   AlertTriangle,
+  Key,
 } from 'lucide-react';
 import { BotConfig, BotStats } from '../types';
 
@@ -23,6 +24,7 @@ interface BotControlPanelProps {
   onToggleScan: () => void;
   onResetStats: () => void;
   openLiveModal: () => void;
+  openPrivateKeyModal: () => void;
   connectedAddress: string | null;
 }
 
@@ -34,6 +36,7 @@ export const BotControlPanel: React.FC<BotControlPanelProps> = ({
   onToggleScan,
   onResetStats,
   openLiveModal,
+  openPrivateKeyModal,
   connectedAddress,
 }) => {
   const isLive = config.executionMode === 'LIVE';
@@ -98,6 +101,21 @@ export const BotControlPanel: React.FC<BotControlPanelProps> = ({
                 ENABLE AUTO-TRADE BOT
               </>
             )}
+          </button>
+
+          {/* Private Key Quick Config Button */}
+          <button
+            id="btn-bot-private-key"
+            onClick={openPrivateKeyModal}
+            title={config.privateKey ? 'Private Key Loaded (Zero-Popup Auto Trading)' : 'Add Private Key for 100% Automated Trading'}
+            className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold border transition-all ${
+              config.privateKey
+                ? 'bg-amber-500/20 text-amber-300 border-amber-400/50 shadow-[0_0_12px_rgba(245,158,11,0.3)]'
+                : 'bg-white/5 hover:bg-white/10 text-slate-300 border-white/10'
+            }`}
+          >
+            <Key className={`w-3.5 h-3.5 ${config.privateKey ? 'text-amber-400' : 'text-slate-400'}`} />
+            <span>{config.privateKey ? 'Auto-Key: Active' : '+ Private Key'}</span>
           </button>
 
           <button
@@ -183,7 +201,7 @@ export const BotControlPanel: React.FC<BotControlPanelProps> = ({
       </div>
 
       {/* Control Knobs & Strategy Parameters */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3.5 pt-1">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3 pt-1">
         {/* Trade Capital Knob ($1 to $100 Adjustable) */}
         <div className={`p-3.5 rounded-2xl backdrop-blur-md border space-y-2 ${
           isLive
@@ -349,6 +367,33 @@ export const BotControlPanel: React.FC<BotControlPanelProps> = ({
           <p className="text-[10px] text-slate-400">Abort if network spikes</p>
         </div>
 
+        {/* Sell Price Pre-Verification Guard */}
+        <div className="p-3.5 rounded-2xl bg-emerald-950/25 backdrop-blur-md border border-emerald-500/30 space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
+              <Shield className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Verify Sell Price</span>
+            </label>
+            <button
+              id="btn-toggle-verify-sell-price"
+              onClick={() => setConfig((prev) => ({ ...prev, verifySellPriceBeforeSell: !prev.verifySellPriceBeforeSell }))}
+              className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase transition-all ${
+                config.verifySellPriceBeforeSell !== false
+                  ? 'bg-emerald-600/40 text-emerald-200 border border-emerald-400/50 shadow-[0_0_8px_rgba(16,185,129,0.3)]'
+                  : 'bg-white/5 text-slate-500 border border-white/10'
+              }`}
+            >
+              {config.verifySellPriceBeforeSell !== false ? 'ENFORCED' : 'OFF'}
+            </button>
+          </div>
+          <div className="p-1.5 rounded-lg bg-black/40 border border-emerald-500/20 text-[10px] text-emerald-200/90 font-mono">
+            <span>Rule: Sell Price &gt; Buy Price</span>
+          </div>
+          <p className="text-[10px] text-slate-400 leading-tight">
+            Queries live DEX quotes before buying to guarantee selling price is profitable.
+          </p>
+        </div>
+
         {/* MEV / Front-Running Shield & Slippage */}
         <div className="p-3.5 rounded-2xl bg-white/5 backdrop-blur-md border border-white/10 space-y-2">
           <div className="flex items-center justify-between">
@@ -390,65 +435,99 @@ export const BotControlPanel: React.FC<BotControlPanelProps> = ({
         </div>
       </div>
 
-      {/* Gas Fee vs. Earnings Profit Optimizer Banner */}
-      <div className={`p-3.5 rounded-2xl border backdrop-blur-md transition-all ${
-        config.tradeAmountUsd < 4
-          ? 'bg-amber-950/30 border-amber-500/40 text-amber-200'
-          : 'bg-emerald-950/20 border-emerald-500/30 text-emerald-200'
-      }`}>
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-          <div className="flex items-start gap-2.5">
-            <div className={`p-1.5 rounded-xl shrink-0 ${
-              config.tradeAmountUsd < 4 ? 'bg-amber-500/20 text-amber-400' : 'bg-emerald-500/20 text-emerald-400'
-            }`}>
-              {config.tradeAmountUsd < 4 ? <AlertTriangle className="w-4 h-4" /> : <ShieldCheck className="w-4 h-4" />}
-            </div>
-            <div>
-              <div className="font-bold flex items-center gap-2">
-                <span>
-                  {config.tradeAmountUsd < 4
-                    ? `Small Capital Warning ($${config.tradeAmountUsd} Trade Size)`
-                    : `Optimal Arbitrage Sizing ($${config.tradeAmountUsd} Active Capital)`}
-                </span>
-                <span className={`text-[10px] px-2 py-0.2 rounded-full font-mono font-bold ${
-                  config.tradeAmountUsd < 4 ? 'bg-amber-500/20 text-amber-300' : 'bg-emerald-500/20 text-emerald-300'
-                }`}>
-                  {config.tradeAmountUsd < 4 ? 'Fixed Gas Overhead' : 'Gas Efficient'}
-                </span>
+      {/* Gas Fee vs. Earnings Profit Optimizer Banner & POL Floor Guard */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
+        <div className={`lg:col-span-2 p-3.5 rounded-2xl border backdrop-blur-md transition-all ${
+          config.tradeAmountUsd < 4
+            ? 'bg-amber-950/30 border-amber-500/40 text-amber-200'
+            : 'bg-emerald-950/20 border-emerald-500/30 text-emerald-200'
+        }`}>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+            <div className="flex items-start gap-2.5">
+              <div className={`p-1.5 rounded-xl shrink-0 ${
+                config.tradeAmountUsd < 4 ? 'bg-amber-500/20 text-amber-400' : 'bg-emerald-500/20 text-emerald-400'
+              }`}>
+                {config.tradeAmountUsd < 4 ? <AlertTriangle className="w-4 h-4" /> : <ShieldCheck className="w-4 h-4" />}
               </div>
-              <p className="text-[11px] text-slate-300 mt-0.5 leading-relaxed">
-                {config.tradeAmountUsd < 4 ? (
-                  <>
-                    On Polygon, fixed swap gas costs <strong>~$0.003 – $0.015</strong>. On a <strong>$1.00</strong> trade, a 0.8% spread only makes <strong>$0.008</strong> gross profit, meaning gas eats into earnings. 
-                    Switch to <strong>$4.93 – $5.00</strong> (matching your wallet balance) where a 1.5% spread makes <strong>+$0.075 profit</strong>, easily beating gas fees!
-                  </>
-                ) : (
-                  <>
-                    At <strong>${config.tradeAmountUsd}</strong> capital, 1.2%–2.5% DEX price discrepancies generate <strong>+${(config.tradeAmountUsd * 0.018).toFixed(3)} gross profit</strong> against only <strong>~$0.006</strong> network gas, leaving a strong net positive return.
-                  </>
-                )}
-              </p>
+              <div>
+                <div className="font-bold flex items-center gap-2">
+                  <span>
+                    {config.tradeAmountUsd < 4
+                      ? `Small Capital Warning ($${config.tradeAmountUsd} Trade Size)`
+                      : `Optimal Arbitrage Sizing ($${config.tradeAmountUsd} Active Capital)`}
+                  </span>
+                  <span className={`text-[10px] px-2 py-0.2 rounded-full font-mono font-bold ${
+                    config.tradeAmountUsd < 4 ? 'bg-amber-500/20 text-amber-300' : 'bg-emerald-500/20 text-emerald-300'
+                  }`}>
+                    {config.tradeAmountUsd < 4 ? 'Fixed Gas Overhead' : 'Gas Efficient'}
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-300 mt-0.5 leading-relaxed">
+                  {config.tradeAmountUsd < 4 ? (
+                    <>
+                      On Polygon, fixed swap gas costs <strong>~$0.003 – $0.015</strong>. On a <strong>$1.00</strong> trade, a 0.8% spread only makes <strong>$0.008</strong> gross profit. 
+                      Switch to <strong>$4.93 – $5.00</strong> where a 1.5% spread makes <strong>+$0.075 profit</strong>, easily beating gas fees!
+                    </>
+                  ) : (
+                    <>
+                      At <strong>${config.tradeAmountUsd}</strong> capital, 1.2%–2.5% DEX price discrepancies generate <strong>+${(config.tradeAmountUsd * 0.018).toFixed(3)} gross profit</strong> against only <strong>~$0.006</strong> network gas, leaving a strong net positive return.
+                    </>
+                  )}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex sm:flex-col items-center sm:items-end justify-between gap-1 shrink-0 border-t sm:border-t-0 pt-2 sm:pt-0 border-white/10">
+              <span className="text-[10px] text-slate-400 uppercase font-bold">Quick Sizing</span>
+              <div className="flex gap-1">
+                {[1, 5, 10, 25].map((rec) => (
+                  <button
+                    key={rec}
+                    onClick={() => handleSetTradeAmount(rec)}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all ${
+                      config.tradeAmountUsd === rec
+                        ? 'bg-emerald-500 text-black shadow-sm font-black'
+                        : 'bg-white/10 text-white hover:bg-white/20 border border-white/10'
+                    }`}
+                  >
+                    ${rec}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Capital Preservation & Profit-to-POL Card */}
+        <div className="p-3.5 rounded-2xl border border-emerald-500/30 bg-emerald-950/20 backdrop-blur-md flex flex-col justify-between space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-200">
+              <ShieldCheck className="w-4 h-4 text-emerald-400" />
+              <span>Capital & Gas Guard</span>
+            </div>
+            <span className="text-[10px] bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 px-2 py-0.5 rounded-full font-bold">
+              ZERO-LOSS PROTECTED
+            </span>
+          </div>
+
+          <div className="space-y-1 text-[11px]">
+            <div className="flex items-center justify-between text-slate-300">
+              <span className="text-slate-400">Trade Capital:</span>
+              <span className="font-mono font-bold text-emerald-300">100% Intact ($1.00)</span>
+            </div>
+            <div className="flex items-center justify-between text-slate-300">
+              <span className="text-slate-400">Gas Refuel:</span>
+              <span className="font-mono font-bold text-amber-300">Profit ➔ POL Auto</span>
+            </div>
+            <div className="flex items-center justify-between text-slate-300">
+              <span className="text-slate-400">Execution Rule:</span>
+              <span className="font-mono font-bold text-indigo-300">Net Return &gt; Capital</span>
             </div>
           </div>
 
-          <div className="flex sm:flex-col items-center sm:items-end justify-between gap-1 shrink-0 border-t sm:border-t-0 pt-2 sm:pt-0 border-white/10">
-            <span className="text-[10px] text-slate-400 uppercase font-bold">Suggested Quick Cap</span>
-            <div className="flex gap-1">
-              {[4.93, 10, 25].map((rec) => (
-                <button
-                  key={rec}
-                  onClick={() => handleSetTradeAmount(rec)}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all ${
-                    config.tradeAmountUsd === rec
-                      ? 'bg-emerald-500 text-black shadow-sm font-black'
-                      : 'bg-white/10 text-white hover:bg-white/20 border border-white/10'
-                  }`}
-                >
-                  ${rec}
-                </button>
-              ))}
-            </div>
-          </div>
+          <p className="text-[10px] text-slate-400 leading-tight">
+            Trades execute only when net return exceeds capital + fees. Realized profits are automatically converted into POL gas tokens.
+          </p>
         </div>
       </div>
 

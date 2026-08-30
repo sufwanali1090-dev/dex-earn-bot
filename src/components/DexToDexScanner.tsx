@@ -10,6 +10,8 @@ import {
   TrendingUp,
   Percent,
   Layers,
+  RefreshCw,
+  Clock,
 } from 'lucide-react';
 import { DexToDexOpportunity, BotConfig } from '../types';
 
@@ -18,6 +20,9 @@ interface DexToDexScannerProps {
   config: BotConfig;
   onExecuteTrade: (opp: DexToDexOpportunity) => void;
   executingId: string | null;
+  onForceRescan?: () => void | Promise<void>;
+  isRescanning?: boolean;
+  lastRescanTime?: number;
 }
 
 export const DexToDexScanner: React.FC<DexToDexScannerProps> = ({
@@ -25,10 +30,22 @@ export const DexToDexScanner: React.FC<DexToDexScannerProps> = ({
   config,
   onExecuteTrade,
   executingId,
+  onForceRescan,
+  isRescanning = false,
+  lastRescanTime,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [onlyProfitable, setOnlyProfitable] = useState(false);
+  const [justRescanned, setJustRescanned] = useState(false);
+
+  const handleRescanClick = async () => {
+    if (onForceRescan && !isRescanning) {
+      await onForceRescan();
+      setJustRescanned(true);
+      setTimeout(() => setJustRescanned(false), 2500);
+    }
+  };
 
   const filtered = opportunities.filter((opp) => {
     const matchesSearch =
@@ -93,24 +110,79 @@ export const DexToDexScanner: React.FC<DexToDexScannerProps> = ({
             <CheckCircle2 className="w-3.5 h-3.5 text-green-400" />
             <span>Profitable Gaps ({profitableCount})</span>
           </button>
+
+          {/* Quick Rescan in Filter Bar */}
+          {onForceRescan && (
+            <button
+              id="btn-quick-force-rescan-dex"
+              onClick={handleRescanClick}
+              disabled={isRescanning}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${
+                isRescanning
+                  ? 'bg-indigo-600/40 text-indigo-200 border-indigo-400/40 cursor-wait'
+                  : 'bg-indigo-950/60 hover:bg-indigo-900/60 text-indigo-300 border-indigo-500/40 hover:border-indigo-400 shadow-sm'
+              }`}
+              title="Force rescan all token prices across DEXes"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isRescanning ? 'animate-spin text-indigo-300' : ''}`} />
+              <span className="hidden sm:inline">Force Rescan</span>
+            </button>
+          )}
         </div>
       </div>
 
       {/* Real-Time Opportunity Grid / List */}
       <div className="bg-white/5 backdrop-blur-2xl border border-white/10 rounded-2xl overflow-hidden shadow-2xl flex flex-col">
-        <div className="px-6 py-4 border-b border-white/10 flex items-center justify-between bg-white/5">
+        <div className="px-6 py-4 border-b border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-white/5">
           <div className="flex items-center gap-3">
-            <div className="w-2 h-2 bg-indigo-400 rounded-full shadow-[0_0_8px_#818cf8] animate-pulse" />
-            <h3 className="text-sm font-bold uppercase tracking-wider text-slate-200">
-              Live Opportunity Scanner (DEX-to-DEX)
-            </h3>
-            <span className="text-xs text-slate-400 font-mono">
-              ({filtered.length} active pair routes)
+            <div className="w-2.5 h-2.5 bg-indigo-400 rounded-full shadow-[0_0_8px_#818cf8] animate-pulse" />
+            <div>
+              <h3 className="text-sm font-bold uppercase tracking-wider text-slate-200 flex items-center gap-2">
+                <span>Live Opportunity Scanner (DEX-to-DEX)</span>
+              </h3>
+              <span className="text-xs text-slate-400 font-mono">
+                ({filtered.length} unique tokens • 1 Best Route per Coin)
+              </span>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-start sm:justify-end">
+            {/* Primary Dedicated Force Rescan Button */}
+            {onForceRescan && (
+              <button
+                id="btn-force-rescan-dex-prices"
+                onClick={handleRescanClick}
+                disabled={isRescanning}
+                className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shadow-md active:scale-95 border ${
+                  isRescanning
+                    ? 'bg-indigo-600/50 text-indigo-200 border-indigo-400/40 cursor-wait'
+                    : justRescanned
+                    ? 'bg-emerald-600/40 text-emerald-200 border-emerald-400/50 shadow-[0_0_12px_rgba(16,185,129,0.3)]'
+                    : 'bg-gradient-to-r from-indigo-600 via-indigo-500 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white border-indigo-400/40 hover:shadow-[0_0_15px_rgba(99,102,241,0.4)]'
+                }`}
+                title="Force instant fetch and recalculation of all live token prices and DEX AMM quotes"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${isRescanning ? 'animate-spin text-white' : justRescanned ? 'text-emerald-300' : 'text-indigo-200'}`} />
+                <span>
+                  {isRescanning ? 'Rescanning All Prices...' : justRescanned ? '✓ Rescan Complete!' : 'Force Rescan All Prices'}
+                </span>
+              </button>
+            )}
+
+            {config.autoTradeEnabled ? (
+              <span className="text-[10px] text-emerald-300 bg-emerald-500/20 px-3 py-1 rounded-full border border-emerald-500/40 font-bold uppercase tracking-wider flex items-center gap-1.5 shadow-[0_0_12px_rgba(16,185,129,0.3)]">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+                Auto-Trade Active (≥ ${(config.minProfitMarginUsd || 0.01).toFixed(2)})
+              </span>
+            ) : (
+              <span className="text-[10px] text-amber-300 bg-amber-500/15 px-3 py-1 rounded-full border border-amber-500/30 font-semibold uppercase tracking-wider">
+                Auto-Trade Paused
+              </span>
+            )}
+            <span className="text-[10px] text-emerald-300 bg-emerald-500/15 px-2.5 py-1 rounded-full border border-emerald-500/30 font-semibold uppercase tracking-wider flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping" />
+              Pre-Scan Verified
             </span>
           </div>
-          <span className="text-[10px] text-indigo-300 bg-indigo-500/20 px-3 py-1 rounded-full border border-indigo-500/30 font-semibold uppercase tracking-wider animate-pulse">
-            Real-Time Stream Active
-          </span>
         </div>
 
         <div className="overflow-x-auto">
@@ -127,7 +199,7 @@ export const DexToDexScanner: React.FC<DexToDexScannerProps> = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-white/5 font-mono">
-              {filtered.slice(0, 20).map((opp) => {
+              {filtered.map((opp) => {
                 const isExecuting = executingId === opp.id;
 
                 return (
@@ -174,14 +246,23 @@ export const DexToDexScanner: React.FC<DexToDexScannerProps> = ({
                     {/* Sell DEX */}
                     <td className="py-3.5 px-4">
                       <div className="space-y-0.5">
-                        <span
-                          className="inline-block px-2 py-0.5 rounded-md text-[10px] font-semibold text-white backdrop-blur-sm"
-                          style={{ backgroundColor: `${opp.sellDex.color}35`, border: `1px solid ${opp.sellDex.color}70` }}
-                        >
-                          {opp.sellDex.name.split(' ')[0]}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span
+                            className="inline-block px-2 py-0.5 rounded-md text-[10px] font-semibold text-white backdrop-blur-sm"
+                            style={{ backgroundColor: `${opp.sellDex.color}35`, border: `1px solid ${opp.sellDex.color}70` }}
+                          >
+                            {opp.sellDex.name.split(' ')[0]}
+                          </span>
+                          <span className="text-[9px] font-sans font-bold px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-0.5" title={opp.sellPriceVerificationReason || 'Verified: Sell Bid > Buy Price'}>
+                            <CheckCircle2 className="w-2.5 h-2.5 text-emerald-400" />
+                            Verified
+                          </span>
+                        </div>
                         <div className="text-slate-200 text-xs font-bold font-mono">
                           ${opp.sellPrice >= 1 ? opp.sellPrice.toFixed(4) : opp.sellPrice.toFixed(6)}
+                        </div>
+                        <div className="text-[9px] text-emerald-400/80 font-sans">
+                          Bid &gt; Buy (${opp.buyPrice >= 1 ? opp.buyPrice.toFixed(4) : opp.buyPrice.toFixed(6)})
                         </div>
                       </div>
                     </td>

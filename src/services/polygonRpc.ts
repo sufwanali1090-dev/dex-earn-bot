@@ -3,19 +3,12 @@ import { RpcEndpoint } from '../types';
 
 export const DEFAULT_POLYGON_RPCS: RpcEndpoint[] = [
   {
-    name: 'Polygon Foundation (Official)',
-    url: 'https://polygon-rpc.com',
+    name: 'PublicNode Bor (Fast & Open)',
+    url: 'https://polygon-bor-rpc.publicnode.com',
     chainId: 137,
     latencyMs: 0,
     status: 'connected',
     isDefault: true,
-  },
-  {
-    name: 'PublicNode Bor RPC',
-    url: 'https://polygon-bor-rpc.publicnode.com',
-    chainId: 137,
-    latencyMs: 0,
-    status: 'checking',
   },
   {
     name: 'LlamaNodes Polygon',
@@ -32,7 +25,7 @@ export const DEFAULT_POLYGON_RPCS: RpcEndpoint[] = [
     status: 'checking',
   },
   {
-    name: 'Ankr Polygon',
+    name: 'Ankr Polygon Public',
     url: 'https://rpc.ankr.com/polygon',
     chainId: 137,
     latencyMs: 0,
@@ -41,6 +34,13 @@ export const DEFAULT_POLYGON_RPCS: RpcEndpoint[] = [
   {
     name: 'dRPC Polygon Node',
     url: 'https://polygon.drpc.org',
+    chainId: 137,
+    latencyMs: 0,
+    status: 'checking',
+  },
+  {
+    name: 'BlastAPI Polygon Public',
+    url: 'https://polygon-mainnet.public.blastapi.io',
     chainId: 137,
     latencyMs: 0,
     status: 'checking',
@@ -58,22 +58,28 @@ export const POLYGON_USDT_NATIVE_ADDRESS = '0x4ECB77443180eb0bcaD6aCd55B6327b9c9
 const ERC20_BALANCE_ABI = ['function balanceOf(address account) external view returns (uint256)'];
 
 class PolygonRpcManager {
-  private activeRpcUrl: string = 'https://rpc.ankr.com/polygon';
+  private activeRpcUrl: string = 'https://polygon-bor-rpc.publicnode.com';
   private provider: ethers.JsonRpcProvider | null = null;
   private currentBlock: number = 62890000;
   private currentGasPriceGwei: number = 32.5;
-  private polPriceUsd: number = 0.42;
+  private polPriceUsd: number = 0.1085;
 
   constructor() {
     this.initProvider(this.activeRpcUrl);
   }
 
+  public setPolPriceUsd(price: number) {
+    if (price > 0) {
+      this.polPriceUsd = price;
+    }
+  }
+
   public initProvider(url: string): ethers.JsonRpcProvider {
     this.activeRpcUrl = url;
     try {
-      this.provider = new ethers.JsonRpcProvider(url, {
-        name: 'polygon',
-        chainId: 137,
+      const polygonNetwork = ethers.Network.from(137);
+      this.provider = new ethers.JsonRpcProvider(url, polygonNetwork, {
+        staticNetwork: polygonNetwork,
       });
     } catch {
       this.provider = null;
@@ -95,7 +101,10 @@ class PolygonRpcManager {
   public async testRpcLatency(url: string): Promise<{ latencyMs: number; blockNumber: number; success: boolean }> {
     const start = performance.now();
     try {
-      const tempProvider = new ethers.JsonRpcProvider(url, { name: 'polygon', chainId: 137 });
+      const polygonNetwork = ethers.Network.from(137);
+      const tempProvider = new ethers.JsonRpcProvider(url, polygonNetwork, {
+        staticNetwork: polygonNetwork,
+      });
       // Call blockNumber with a short timeout
       const blockPromise = tempProvider.getBlockNumber();
       const timeoutPromise = new Promise<never>((_, reject) =>
@@ -201,18 +210,22 @@ class PolygonRpcManager {
 
     const rpcUrlsToTry = [
       this.activeRpcUrl,
-      'https://polygon-rpc.com',
       'https://polygon-bor-rpc.publicnode.com',
-      'https://1rpc.io/matic',
       'https://polygon.llamarpc.com',
+      'https://1rpc.io/matic',
       'https://rpc.ankr.com/polygon',
+      'https://polygon.drpc.org',
+      'https://polygon-mainnet.public.blastapi.io',
     ];
 
     let lastError: string | undefined;
 
     for (const rpcUrl of rpcUrlsToTry) {
       try {
-        const prov = new ethers.JsonRpcProvider(rpcUrl, { name: 'polygon', chainId: 137 });
+        const polygonNetwork = ethers.Network.from(137);
+        const prov = new ethers.JsonRpcProvider(rpcUrl, polygonNetwork, {
+          staticNetwork: polygonNetwork,
+        });
 
         // 1. Fetch native POL balance with timeout
         const balanceWeiPromise = prov.getBalance(trimmedAddress);

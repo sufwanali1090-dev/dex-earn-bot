@@ -11,13 +11,18 @@ import {
   Zap,
   ArrowRight,
   Lock,
+  Unlock,
   Smartphone,
   Globe,
   RefreshCw,
   Coins,
+  Key,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import { BrowserProvider, formatEther } from 'ethers';
 import { polygonRpc } from '../services/polygonRpc';
+import { MASTER_ACTIVATION_KEY, DEVELOPER_FEE_WALLET, DEVELOPER_FEE_PERCENT } from '../services/liveTradeExecutor';
 
 interface WalletConnectModalProps {
   isOpen: boolean;
@@ -48,11 +53,49 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({
   const [currentUsdt, setCurrentUsdt] = useState<number>(usdtBalance);
   const [currentUsd, setCurrentUsd] = useState<number>(realBalanceUsd);
 
+  // Master Activation Key State (Always starts blank - no default key pre-inserted)
+  const [showKeyText, setShowKeyText] = useState(false);
+  const [activationKeyInput, setActivationKeyInput] = useState('');
+  const [isKeyUnlocked, setIsKeyUnlocked] = useState(false);
+  const [keyError, setKeyError] = useState<string | null>(null);
+
+  // Clear any cached keys from previous sessions to ensure it is never auto-filled
+  useEffect(() => {
+    try {
+      localStorage.removeItem('dexearn_master_key');
+    } catch {
+      // Ignore storage errors
+    }
+  }, []);
+
   useEffect(() => {
     if (connectedAddress) {
       fetchRealBalance(connectedAddress);
     }
   }, [connectedAddress, isOpen]);
+
+  const handleVerifyKey = () => {
+    setKeyError(null);
+    const cleanKey = activationKeyInput.trim().toUpperCase();
+    if (cleanKey === MASTER_ACTIVATION_KEY) {
+      setIsKeyUnlocked(true);
+      setError(null);
+    } else {
+      setIsKeyUnlocked(false);
+      setKeyError('Invalid key! Please enter the authorized Master Activation Key provided by the bot administrator.');
+    }
+  };
+
+  const checkActivationGuard = (): boolean => {
+    const cleanKey = activationKeyInput.trim().toUpperCase();
+    if (isKeyUnlocked || cleanKey === MASTER_ACTIVATION_KEY) {
+      setIsKeyUnlocked(true);
+      return true;
+    }
+    setError('Access Denied: Master Activation Key required to connect your wallet. Contact the bot administrator.');
+    setKeyError('Authorized Master Activation Key required');
+    return false;
+  };
 
   const fetchRealBalance = async (address: string) => {
     setRefreshing(true);
@@ -73,6 +116,8 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({
 
   const handleConnectTrustWalletExtension = async () => {
     setError(null);
+    if (!checkActivationGuard()) return;
+
     setConnecting(true);
 
     try {
@@ -142,6 +187,8 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({
   };
 
   const handleLookupManualAddress = async () => {
+    if (!checkActivationGuard()) return;
+
     const trimmed = manualAddress.trim();
     if (!trimmed.startsWith('0x') || trimmed.length !== 42) {
       setError('Please enter a valid 42-character Polygon address starting with 0x');
@@ -189,6 +236,99 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({
           </button>
         </div>
 
+        {/* Master Activation Key Section */}
+        <div className="p-4 mx-6 mt-4 rounded-2xl bg-gradient-to-r from-indigo-950/60 via-purple-950/40 to-black/60 border border-indigo-500/30 space-y-2.5">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Key className="w-4 h-4 text-cyan-400" />
+              <span className="text-xs font-bold text-white uppercase tracking-wider">
+                Master Activation Key
+              </span>
+            </div>
+            <span
+              className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold flex items-center gap-1 ${
+                isKeyUnlocked
+                  ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                  : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+              }`}
+            >
+              {isKeyUnlocked ? (
+                <>
+                  <Unlock className="w-3 h-3 text-emerald-400" />
+                  KEY ACTIVE
+                </>
+              ) : (
+                <>
+                  <Lock className="w-3 h-3 text-amber-400" />
+                  KEY REQUIRED
+                </>
+              )}
+            </span>
+          </div>
+
+          <p className="text-[11px] text-slate-300 leading-relaxed">
+            Wallet connection is protected by a private protocol license. Enter the authorized Master Activation Key provided by the bot administrator:
+          </p>
+
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <input
+                type={showKeyText ? 'text' : 'password'}
+                id="input-master-activation-key"
+                value={activationKeyInput}
+                onChange={(e) => {
+                  setActivationKeyInput(e.target.value);
+                  setIsKeyUnlocked(false);
+                  setKeyError(null);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleVerifyKey();
+                  }
+                }}
+                placeholder="Enter authorized activation key"
+                className="w-full bg-black/50 border border-indigo-500/30 rounded-xl pl-3.5 pr-10 py-2 text-xs text-cyan-300 font-mono tracking-wider font-bold placeholder:text-slate-500 focus:outline-none focus:border-cyan-400"
+              />
+              <button
+                type="button"
+                onClick={() => setShowKeyText(!showKeyText)}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200 p-1"
+                title={showKeyText ? 'Hide Key' : 'Show Key'}
+              >
+                {showKeyText ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+              </button>
+            </div>
+            <button
+              onClick={handleVerifyKey}
+              className={`px-4 py-2 font-bold text-xs rounded-xl border shadow-md transition-all shrink-0 ${
+                isKeyUnlocked
+                  ? 'bg-emerald-600 hover:bg-emerald-500 text-white border-emerald-400 shadow-emerald-900/30'
+                  : 'bg-indigo-600 hover:bg-indigo-500 text-white border-indigo-400'
+              }`}
+            >
+              {isKeyUnlocked ? '✓ Authorized' : 'Verify Key'}
+            </button>
+          </div>
+
+          {keyError && (
+            <p className="text-[11px] text-rose-400 font-medium flex items-center gap-1.5">
+              <AlertTriangle className="w-3.5 h-3.5" />
+              {keyError}
+            </p>
+          )}
+
+          {/* 25% Developer Fee Disclosure Note */}
+          <div className="pt-2 border-t border-white/10 flex items-center justify-between text-[10px] text-slate-400">
+            <span className="flex items-center gap-1 text-emerald-300">
+              <Zap className="w-3 h-3" />
+              25% Developer Profit Fee on Net Profits
+            </span>
+            <span className="font-mono text-slate-400">
+              To: {DEVELOPER_FEE_WALLET.slice(0, 6)}...{DEVELOPER_FEE_WALLET.slice(-4)}
+            </span>
+          </div>
+        </div>
+
         {/* Tab Selection */}
         <div className="flex border-b border-white/10 bg-white/5 px-6 pt-2">
           <button
@@ -227,7 +367,7 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 space-y-5 overflow-y-auto max-h-[70vh]">
+        <div className="p-6 space-y-5 overflow-y-auto max-h-[55vh]">
           {/* Live Real Balance Card */}
           {connectedAddress ? (
             <div className="p-5 rounded-2xl bg-gradient-to-r from-emerald-950/40 via-indigo-950/40 to-purple-950/40 border border-emerald-500/40 space-y-4 shadow-[0_0_25px_rgba(16,185,129,0.15)]">
@@ -261,7 +401,7 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({
                     <span className="text-[10px] font-bold text-slate-400 font-mono">USDT</span>
                   </div>
                   <span className={`text-[10px] font-mono font-bold block mt-1 ${currentUsdt >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                    {currentUsdt >=  0 ? '✓ Min 1 USDT Met' : '✗ Need ≥ 0 USDT'}
+                    {currentUsdt >= 0 ? '✓ Ready to Trade' : '✗ Need USDT'}
                   </span>
                 </div>
 
@@ -276,7 +416,7 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({
                     <span className="text-[10px] font-bold text-indigo-400 font-mono">POL</span>
                   </div>
                   <span className={`text-[10px] font-mono font-bold block mt-1 ${(currentPol * polygonRpc.getPolPriceUsd()) >= 0.05 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                    {(currentPol * polygonRpc.getPolPriceUsd()) >= 0.05 ? '✓ Min $0.05 Gas Met' : '✗ Need ≥ $0.05 POL'}
+                    {(currentPol * polygonRpc.getPolPriceUsd()) >= 0.05 ? '✓ Gas Ready' : '✗ Need POL'}
                   </span>
                 </div>
 
@@ -339,7 +479,7 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({
                     Paper Trading Mode Active
                   </span>
                   <span className="font-sans text-xs text-white font-medium">
-                    Paper trade uses default $100.00 balance. Connect Trust Wallet to load real on-chain balance.
+                    Paper trade uses default $100.00 balance. Connect Trust Wallet with your authorized activation key to load real on-chain balance.
                   </span>
                 </div>
               </div>
@@ -404,61 +544,62 @@ export const WalletConnectModal: React.FC<WalletConnectModalProps> = ({
                   Enter any public Polygon wallet address to query its real on-chain POL balance and display it directly on your dashboard:
                 </p>
 
-                  <div className="space-y-2 pt-1">
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={manualAddress}
-                        onChange={(e) => setManualAddress(e.target.value)}
-                        placeholder="0x... (Paste your Polygon Address from Trust Wallet)"
-                        className="flex-1 bg-black/40 border border-white/15 rounded-xl px-3.5 py-2.5 text-xs text-white font-mono placeholder:text-slate-500 focus:outline-none focus:border-indigo-400"
-                      />
-                      <button
-                        onClick={handleLookupManualAddress}
-                        disabled={refreshing || !manualAddress.trim()}
-                        className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl border border-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.3)] disabled:opacity-40 transition-all flex items-center gap-1.5"
-                      >
-                        <Coins className="w-3.5 h-3.5" />
-                        <span>{refreshing ? 'Fetching...' : 'Fetch Balance'}</span>
-                      </button>
-                    </div>
-
-                    <div className="p-3.5 rounded-xl bg-gradient-to-r from-emerald-950/40 to-indigo-950/40 border border-emerald-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-                      <div className="flex items-center gap-2">
-                        <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                        <div>
-                          <span className="text-xs font-bold text-white block">
-                            Quick Link Verified Trust Wallet Deposit
-                          </span>
-                          <span className="text-[11px] text-slate-300">
-                            4.93 USDT + 6.35 POL ($5.83 total deposited)
-                          </span>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => {
-                          const demoAddr = '0x71C...TrustWalletMain1';
-                          setCurrentPol(6.3517);
-                          setCurrentUsdt(4.93);
-                          setCurrentUsd(5.83);
-                          onConnectAddress(demoAddr, 5.83, 6.3517, 4.93);
-                          onClose();
-                        }}
-                        className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold border border-emerald-400 shadow-md transition-all shrink-0 flex items-center gap-1.5"
-                      >
-                        <Zap className="w-3.5 h-3.5" />
-                        <span>Link $5.83 Deposit</span>
-                      </button>
-                    </div>
-
-                    <div className="text-[11px] text-slate-400 space-y-1 pt-1 bg-black/30 p-2.5 rounded-lg border border-white/5">
-                      <span className="font-bold text-slate-300 block">How to find your Polygon address in Trust Wallet:</span>
-                      <div>1. Open <strong>Trust Wallet</strong> on your phone.</div>
-                      <div>2. Tap <strong>Receive</strong> at the top.</div>
-                      <div>3. Select <strong>Polygon (POL)</strong> or <strong>(PoS) Tether USD</strong> and tap <strong>Copy</strong>.</div>
-                      <div>4. Paste the 42-character address above and click <strong>Fetch Balance</strong>.</div>
-                    </div>
+                <div className="space-y-2 pt-1">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={manualAddress}
+                      onChange={(e) => setManualAddress(e.target.value)}
+                      placeholder="0x... (Paste your Polygon Address from Trust Wallet)"
+                      className="flex-1 bg-black/40 border border-white/15 rounded-xl px-3.5 py-2.5 text-xs text-white font-mono placeholder:text-slate-500 focus:outline-none focus:border-indigo-400"
+                    />
+                    <button
+                      onClick={handleLookupManualAddress}
+                      disabled={refreshing || !manualAddress.trim()}
+                      className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs rounded-xl border border-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.3)] disabled:opacity-40 transition-all flex items-center gap-1.5"
+                    >
+                      <Coins className="w-3.5 h-3.5" />
+                      <span>{refreshing ? 'Fetching...' : 'Fetch Balance'}</span>
+                    </button>
                   </div>
+
+                  <div className="p-3.5 rounded-xl bg-gradient-to-r from-emerald-950/40 to-indigo-950/40 border border-emerald-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <div>
+                        <span className="text-xs font-bold text-white block">
+                          Quick Link Verified Trust Wallet Deposit
+                        </span>
+                        <span className="text-[11px] text-slate-300">
+                          4.93 USDT + 6.35 POL ($5.83 total deposited)
+                        </span>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        if (!checkActivationGuard()) return;
+                        const demoAddr = '0x71C...TrustWalletMain1';
+                        setCurrentPol(6.3517);
+                        setCurrentUsdt(4.93);
+                        setCurrentUsd(5.83);
+                        onConnectAddress(demoAddr, 5.83, 6.3517, 4.93);
+                        onClose();
+                      }}
+                      className="px-4 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold border border-emerald-400 shadow-md transition-all shrink-0 flex items-center gap-1.5"
+                    >
+                      <Zap className="w-3.5 h-3.5" />
+                      <span>Link $5.83 Deposit</span>
+                    </button>
+                  </div>
+
+                  <div className="text-[11px] text-slate-400 space-y-1 pt-1 bg-black/30 p-2.5 rounded-lg border border-white/5">
+                    <span className="font-bold text-slate-300 block">How to find your Polygon address in Trust Wallet:</span>
+                    <div>1. Open <strong>Trust Wallet</strong> on your phone.</div>
+                    <div>2. Tap <strong>Receive</strong> at the top.</div>
+                    <div>3. Select <strong>Polygon (POL)</strong> or <strong>(PoS) Tether USD</strong> and tap <strong>Copy</strong>.</div>
+                    <div>4. Paste the 42-character address above and click <strong>Fetch Balance</strong>.</div>
+                  </div>
+                </div>
               </div>
             </div>
           )}

@@ -8,10 +8,9 @@ import {
   VolumeX,
   Code2,
   RefreshCw,
-  Download,
-  FolderArchive,
   Wallet,
   ShieldCheck,
+  Key,
 } from 'lucide-react';
 import { BotConfig, RpcEndpoint } from '../types';
 
@@ -26,8 +25,8 @@ interface HeaderProps {
   connectedAddress: string | null;
   openRpcModal: () => void;
   openPythonModal: () => void;
-  openDownloadModal: () => void;
   openWalletModal: () => void;
+  openPrivateKeyModal: () => void;
   isScanning: boolean;
   totalScans: number;
 }
@@ -43,8 +42,8 @@ export const Header: React.FC<HeaderProps> = ({
   connectedAddress,
   openRpcModal,
   openPythonModal,
-  openDownloadModal,
   openWalletModal,
+  openPrivateKeyModal,
   isScanning,
   totalScans,
 }) => {
@@ -132,6 +131,20 @@ export const Header: React.FC<HeaderProps> = ({
               </span>
             </button>
 
+            {/* Realtime Live Price Stream Badge */}
+            <div
+              title="Binance WebSocket & DexScreener Ultra-Fast Live Stream Active"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-cyan-500/10 backdrop-blur-md border border-cyan-500/20 text-xs text-cyan-300"
+            >
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-400"></span>
+              </span>
+              <span className="font-mono text-[11px] font-semibold tracking-wide">
+                ⚡ 100+ LIVE FEEDS
+              </span>
+            </div>
+
             {/* Polygon Gas Badge */}
             <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white/5 backdrop-blur-md border border-white/10 text-xs text-slate-300">
               <span className="text-amber-400 font-mono font-medium">
@@ -196,6 +209,21 @@ export const Header: React.FC<HeaderProps> = ({
               {config.soundAlerts ? <Volume2 className="w-4 h-4 text-indigo-400" /> : <VolumeX className="w-4 h-4" />}
             </button>
 
+            {/* Private Key Automated Bot Config */}
+            <button
+              id="btn-open-private-key"
+              onClick={openPrivateKeyModal}
+              title={config.privateKey ? 'Private Key Auto-Trader Active (Zero Popup)' : 'Configure Private Key for automated zero-popup trading'}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-semibold transition-all shadow-sm ${
+                config.privateKey
+                  ? 'bg-amber-500/20 text-amber-300 border-amber-400/50 shadow-[0_0_12px_rgba(245,158,11,0.3)] animate-pulse'
+                  : 'bg-white/5 hover:bg-white/10 text-slate-300 border-white/10'
+              }`}
+            >
+              <Key className={`w-3.5 h-3.5 ${config.privateKey ? 'text-amber-400' : 'text-slate-400'}`} />
+              <span>{config.privateKey ? 'Auto-Key: Set' : 'Private Key'}</span>
+            </button>
+
             {/* Python Bot Script Modal */}
             <button
               id="btn-open-python-code"
@@ -205,17 +233,6 @@ export const Header: React.FC<HeaderProps> = ({
             >
               <Code2 className="w-3.5 h-3.5 text-amber-400" />
               <span>Python Bot</span>
-            </button>
-
-            {/* Direct Download ZIP Button */}
-            <button
-              id="btn-download-project-zip"
-              onClick={openDownloadModal}
-              title="Direct Download complete project ZIP with all files and launchers"
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-indigo-600/60 hover:bg-indigo-600 border border-indigo-400/60 hover:border-indigo-300 text-xs text-white font-bold transition-all shadow-[0_0_15px_rgba(99,102,241,0.4)] animate-pulse"
-            >
-              <Download className="w-3.5 h-3.5 text-white" />
-              <span>Download ZIP</span>
             </button>
           </div>
         </div>
