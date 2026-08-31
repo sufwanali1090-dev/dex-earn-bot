@@ -1,6 +1,16 @@
 import { TokenInfo } from '../types';
+import { ethers } from 'ethers';
 
-export const OFFICIAL_POLYGON_TOKENS: TokenInfo[] = [
+export function safeChecksumAddress(addr: string): string {
+  if (!addr) return '0x0000000000000000000000000000000000000000';
+  try {
+    return ethers.getAddress(addr.trim().toLowerCase());
+  } catch {
+    return addr;
+  }
+}
+
+const RAW_OFFICIAL_POLYGON_TOKENS: TokenInfo[] = [
   // Core & Native Assets
   {
     symbol: 'WMATIC',
@@ -1065,3 +1075,8 @@ export const OFFICIAL_POLYGON_TOKENS: TokenInfo[] = [
     basePriceUsd: 0.00000082,
   },
 ];
+
+export const OFFICIAL_POLYGON_TOKENS: TokenInfo[] = RAW_OFFICIAL_POLYGON_TOKENS.map((token) => ({
+  ...token,
+  address: safeChecksumAddress(token.address),
+}));

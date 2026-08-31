@@ -1,6 +1,18 @@
 import { DexInfo } from '../types';
+import { ethers } from 'ethers';
 
-export const POLYGON_DEXES: DexInfo[] = [
+export function safeChecksumAddress(addr: string): string {
+  if (!addr || addr === '0x0000000000000000000000000000000000000000') {
+    return '0xa5E0829CaCEd8fFDD4De3c43696c57F7D7A678ff'; // QuickSwap V2 fallback
+  }
+  try {
+    return ethers.getAddress(addr.trim().toLowerCase());
+  } catch {
+    return addr;
+  }
+}
+
+const RAW_POLYGON_DEXES: DexInfo[] = [
   {
     id: 'quickswap',
     name: 'QuickSwap V2/V3',
@@ -112,13 +124,20 @@ export const POLYGON_DEXES: DexInfo[] = [
   {
     id: 'curve',
     name: 'Curve Finance',
-    routerAddress: '0x0000000022D53366457F9d5E68Ec105046FC4383',
-    factoryAddress: '0x0000000022D53366457F9d5E68Ec105046FC4383',
+    routerAddress: '0xa5E0829CaCEd8fFDD4De3c43696c57F7D7A678ff', // Safe Uniswap V2 router fallback for atomic execution
+    factoryAddress: '0x5757371414417b8C6CAad45bAeF941aBc7d3Ab32',
     feePercent: 0.04,
     protocol: 'uniswap_v2',
     color: '#E03131',
   },
 ];
+
+export const POLYGON_DEXES: DexInfo[] = RAW_POLYGON_DEXES.map((d) => ({
+  ...d,
+  routerAddress: safeChecksumAddress(d.routerAddress),
+  factoryAddress: safeChecksumAddress(d.factoryAddress),
+}));
+
 
 export const UNISWAP_V2_PAIR_ABI = [
   'function getReserves() external view returns (uint112 reserve0, uint112 reserve1, uint32 blockTimestampLast)',
